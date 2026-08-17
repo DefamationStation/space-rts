@@ -1,0 +1,16 @@
+node_modules/
+_site/
+dist/
+.captures/
+*.log
+.DS_Store
+Thumbs.db
+
+# Scratch from agent orchestration runs: briefings, dispatches and
+# status files that describe how a change was produced rather than what
+# the project is. Useful while the run is happening, noise afterwards.
+.agents/
+
+# Local editor and agent configuration. Useful on this machine, nobody
+# else's business.
+.claude/

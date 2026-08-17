@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>rts-life</title>
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="A calm, self-playing 2D space RTS simulation.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- The simulation surface. Sized in device pixels by render/canvas.js. -->
+<canvas id="stage"></canvas>
+
+<!--
+  Recessive chrome. Everything here sits above the canvas at low opacity
+  and is deliberately quiet — the simulation is the subject, not the UI.
+-->
+<div id="hud" aria-hidden="true">
+    <div id="hud-status" class="hud-status" hidden></div>
+    <div class="hud-corner hud-left">
+        <div class="hud-faction" data-faction="0">
+            <span class="hud-swatch"></span>
+            <span class="hud-name">—</span>
+            <span class="hud-stats">—</span>
+        </div>
+    </div>
+    <div class="hud-corner hud-right">
+        <div class="hud-faction" data-faction="1">
+            <span class="hud-stats">—</span>
+            <span class="hud-name">—</span>
+            <span class="hud-swatch"></span>
+        </div>
+    </div>
+    <pre id="debug" hidden></pre>
+    <pre id="inspector" hidden></pre>
+    <!-- Many hulls selected at once: the compact board, in place of
+         the full single-ship inspector above. -->
+    <pre id="selection" hidden></pre>
+</div>
+
+<!-- Drag-select rectangle. A DOM element rather than a canvas draw:
+     it is screen-space chrome that has nothing to do with the world
+     transform, it costs no fill rate, and it is themed from the same
+     CSS custom properties as the rest of the HUD. -->
+<div id="marquee" hidden></div>
+
+<!--
+  Controls. Collapsed to a single quiet button until asked for —
+  gospel rule: the simulation is the subject, not the interface. Every
+  row also names its keyboard shortcut, so the panel is where you
+  learn the bindings rather than a replacement for them.
+-->
+<div id="controls">
+    <button id="controls-toggle" type="button" aria-expanded="false"
+            aria-controls="controls-panel" title="Controls">
+        <span class="ctl-glyph" aria-hidden="true">≡</span>
+    </button>
+
+    <div id="controls-panel" hidden>
+        <div class="ctl-row">
+            <span class="ctl-label">theme <em>T</em></span>
+            <span class="ctl-seg" data-group="theme">
+                <button type="button" data-value="auto">auto</button>
+                <button type="button" data-value="void">void</button>
+                <button type="button" data-value="paper">paper</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">speed <em>1-4</em></span>
+            <span class="ctl-seg" data-group="speed">
+                <button type="button" data-value="0.5">½×</button>
+                <button type="button" data-value="1">1×</button>
+                <button type="button" data-value="2">2×</button>
+                <button type="button" data-value="4">4×</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">run <em>space · .</em></span>
+            <span class="ctl-seg">
+                <button type="button" data-action="pause">pause</button>
+                <button type="button" data-action="step">step</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">overlays <em>G</em></span>
+            <span class="ctl-seg">
+                <button type="button" data-toggle="gizmos">gizmos</button>
+                <button type="button" data-toggle="debug">debug</button>
+                <button type="button" data-toggle="hud">hud</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">camera <em>F</em></span>
+            <span class="ctl-seg">
+                <button type="button" data-action="fit">fit map</button>
+                <button type="button" data-toggle="follow">follow</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">spawn side</span>
+            <span class="ctl-seg" data-group="side">
+                <button type="button" data-value="0">A</button>
+                <button type="button" data-value="1">B</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">spawn</span>
+            <span class="ctl-seg">
+                <button type="button" data-spawn="fighter">fighter</button>
+                <button type="button" data-spawn="corvette">corvette</button>
+                <button type="button" data-spawn="frigate">frigate</button>
+                <button type="button" data-spawn="miner">miner</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">swarm</span>
+            <span class="ctl-seg">
+                <button type="button" data-spawn="swarmer" data-alien="1">swarmer</button>
+                <button type="button" data-spawn="harvester" data-alien="1">harvester</button>
+                <button type="button" data-action="incursion">incursion here</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">wave size</span>
+            <span class="ctl-seg" data-group="wave">
+                <button type="button" data-value="0">auto</button>
+                <button type="button" data-value="5">5</button>
+                <button type="button" data-value="15">15</button>
+                <button type="button" data-value="40">40</button>
+                <button type="button" data-value="80">80</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">sandbox</span>
+            <span class="ctl-seg">
+                <button type="button" data-action="warp">warp in sel</button>
+                <button type="button" data-action="heal">heal sel</button>
+                <button type="button" data-action="kill">kill sel</button>
+                <button type="button" data-action="clear">clear ships</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">force</span>
+            <span class="ctl-seg">
+                <button type="button" data-action="truce">toggle truce</button>
+                <button type="button" data-action="mobilise">war footing</button>
+                <button type="button" data-action="metal">+500 metal</button>
+            </span>
+        </div>
+
+        <div class="ctl-row">
+            <span class="ctl-label">share</span>
+            <span class="ctl-seg">
+                <button type="button" data-action="link">copy link to this moment</button>
+            </span>
+        </div>
+
+        <div class="ctl-note" id="controls-note"></div>
+    </div>
+</div>
+
+<!-- Shown while paused. Fades rather than pops. -->
+<div id="paused">paused</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

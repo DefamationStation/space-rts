@@ -1,0 +1,370 @@
+/* ============================================================
+   CHROME
+   ============================================================
+
+   Deliberately recessive. The simulation is the subject; every
+   rule here exists to keep the UI from competing with it.
+
+   NOTE ON COLOUR — see docs/00-GOSPEL.md rule 1.
+   There are no palette literals in this file. Every colour comes
+   from a CSS custom property that `render/theme.js` writes onto
+   :root from `data/themes.js`, so the palette has exactly one
+   home. The only colour-ish declaration here is `color-scheme`,
+   which is what paints the browser's own backdrop before our
+   first frame lands (and so avoids a white flash in dark mode
+   without us hardcoding a background). */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    color-scheme: light dark;
+
+    --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --ui-mono: ui-monospace, SFMono-Regular, 'Cascadia Mono', Consolas, monospace;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--c-ground);
+}
+
+body {
+    font-family: var(--ui-font);
+    /* The sim is not selectable or draggable — it is a thing you watch. */
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#stage {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    /* Canvas is drawn in device pixels; CSS scales it back to layout pixels. */
+}
+
+/* ------------------------------------------------------------
+   HUD
+   ------------------------------------------------------------
+   Two corner readouts, one per faction, in tiny uppercase
+   micro-labels at low opacity. They sit at .55 and are not
+   interactive — they should read as an instrument marking
+   rather than as an interface. */
+
+#hud {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--c-hud-text);
+}
+
+.hud-corner {
+    position: absolute;
+    top: 18px;
+    display: flex;
+    opacity: 0.55;
+    transition: opacity 400ms ease;
+}
+
+.hud-left  { left: 20px; }
+.hud-right { right: 20px; }
+
+.hud-faction {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    white-space: nowrap;
+}
+
+/* A faction is identified by its colour, so the swatch is the label
+   and the name is the annotation — not the other way around. */
+.hud-swatch {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+}
+
+.hud-left  .hud-swatch { background: var(--c-faction-0); }
+.hud-right .hud-swatch { background: var(--c-faction-1); }
+
+.hud-name {
+    color: var(--c-hud-text);
+}
+
+.hud-stats {
+    color: var(--c-hud-dim);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.08em;
+}
+
+/* ------------------------------------------------------------
+   DEBUG OVERLAY  (?debug=1)
+   ------------------------------------------------------------ */
+
+#debug {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    font-family: var(--ui-mono);
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.55;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c-hud-dim);
+    opacity: 0.75;
+    white-space: pre;
+}
+
+#debug[hidden] { display: none; }
+
+/* ------------------------------------------------------------
+   FAST-FORWARD / ANOMALY STATUS BADGE (T1-1)
+   ------------------------------------------------------------ */
+
+.hud-status {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--c-hud-dim);
+    opacity: 0.8;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.hud-status[hidden] { display: none; }
+
+/* ------------------------------------------------------------
+   SHIP INSPECTOR (T1-2)
+   ------------------------------------------------------------ */
+
+#inspector {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    font-family: var(--ui-mono);
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.55;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c-hud-dim);
+    opacity: 0.75;
+    white-space: pre;
+    pointer-events: auto;
+}
+
+#inspector[hidden] { display: none; }
+
+/* ------------------------------------------------------------
+   SELECTION BOARD
+   ------------------------------------------------------------
+   Shown instead of #inspector when more than one hull is selected.
+   Smaller and denser: a roster, not a dossier. One line per hull,
+   and a cap on how many are listed — a box-select over forty ships
+   should tell you what you caught, not fill the screen with it. */
+
+#selection {
+    position: absolute;
+    left: 20px;
+    bottom: 18px;
+    max-height: 46vh;
+    overflow: hidden;
+    font-family: var(--ui-mono);
+    font-size: 9px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c-hud-dim);
+    opacity: 0.72;
+    white-space: pre;
+    pointer-events: auto;
+}
+
+#selection[hidden] { display: none; }
+
+/* ------------------------------------------------------------
+   MARQUEE
+   ------------------------------------------------------------
+   The drag-select rectangle. Positioned in CSS pixels straight from
+   the pointer, so it never consults the world transform — which is
+   what keeps it exact while the camera is being panned or zoomed
+   underneath it. */
+
+#marquee {
+    position: fixed;
+    z-index: 3;
+    pointer-events: none;
+    border: 1px solid var(--c-hud-text);
+    background: color-mix(in srgb, var(--c-hud-text) 8%, transparent);
+    opacity: 0.55;
+}
+
+#marquee[hidden] { display: none; }
+
+/* ------------------------------------------------------------
+   CONTROLS
+   ------------------------------------------------------------
+   Collapsed to one small button until opened. Everything here sits
+   at low opacity and lifts on hover — the panel should feel like an
+   instrument's service hatch rather than an application's toolbar,
+   which is the same restraint the corner readouts are built on.
+
+   `#hud` sets pointer-events: none so the canvas keeps the mouse;
+   these are the one part of the chrome that has to take clicks back,
+   and they live outside #hud for exactly that reason. */
+
+#controls {
+    position: fixed;
+    right: 20px;
+    bottom: 18px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    font-family: var(--ui-mono);
+    color: var(--c-hud-text);
+}
+
+#controls-toggle {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--c-hud-dim);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--c-hud-text);
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    opacity: 0.45;
+    cursor: pointer;
+    transition: opacity 180ms ease;
+}
+
+#controls-toggle:hover,
+#controls[data-open="1"] #controls-toggle { opacity: 0.9; }
+
+#controls-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 11px 13px;
+    border: 1px solid var(--c-hud-dim);
+    border-radius: 3px;
+    /* Enough tint to separate the panel from a busy field of ships
+       without becoming a slab. `color-mix` keeps it theme-derived. */
+    background: color-mix(in srgb, var(--c-ground) 88%, transparent);
+    opacity: 0.94;
+}
+
+#controls-panel[hidden] { display: none; }
+
+.ctl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.ctl-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-hud-dim);
+    white-space: nowrap;
+}
+
+/* The shortcut, carried next to the control it belongs to. */
+.ctl-label em {
+    font-style: normal;
+    opacity: 0.6;
+    margin-left: 5px;
+}
+
+.ctl-seg {
+    display: flex;
+    gap: 3px;
+}
+
+.ctl-seg button {
+    padding: 3px 7px;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--c-hud-dim) 14%, transparent);
+    color: var(--c-hud-dim);
+    font: inherit;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 140ms ease, background 140ms ease;
+}
+
+.ctl-seg button:hover { color: var(--c-hud-text); }
+
+/* One state, shown the same way whether it is a radio choice
+   (theme, speed) or a toggle (gizmos, follow). */
+.ctl-seg button[data-active="1"] {
+    background: color-mix(in srgb, var(--c-hud-text) 20%, transparent);
+    border-color: var(--c-hud-dim);
+    color: var(--c-hud-text);
+}
+
+.ctl-note {
+    min-height: 11px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: var(--c-hud-dim);
+    opacity: 0;
+    transition: opacity 200ms ease;
+}
+
+.ctl-note[data-show="1"] { opacity: 0.8; }
+
+body.hud-hidden #hud { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    #controls-toggle, .ctl-seg button, .ctl-note { transition: none; }
+}
+
+/* ------------------------------------------------------------
+   PAUSE
+   ------------------------------------------------------------
+   Fades in over 260ms. Nothing in this project pops. */
+
+#paused {
+    position: fixed;
+    left: 50%;
+    bottom: 44px;
+    transform: translateX(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--c-hud-text);
+    opacity: 0;
+    transition: opacity 260ms ease;
+    pointer-events: none;
+}
+
+body.is-paused #paused { opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+    .hud-corner, #paused { transition: none; }
+}

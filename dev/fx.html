@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rts-life · fx bench</title>
+<meta name="color-scheme" content="light dark">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font: 10px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    letter-spacing: .1em; text-transform: uppercase;
+    background: var(--c-ground); color: var(--c-hud-dim);
+    padding: 28px 32px 60px;
+}
+h1 { font-size: 10px; font-weight: 700; color: var(--c-hud-text); margin-bottom: 4px; }
+p  { margin-bottom: 22px; text-transform: none; letter-spacing: .04em; opacity: .8; max-width: 62ch; }
+canvas { display: block; width: 100%; height: auto; }
+button {
+    font: inherit; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--c-hud-text); background: none;
+    border: 1px solid var(--c-grid); border-radius: 4px;
+    padding: 5px 11px; margin: 0 6px 18px 0; cursor: pointer;
+}
+button:hover { border-color: var(--c-hud-dim); }
+</style>
+</head>
+<body>
+
+<h1>fx bench</h1>
+<p>
+    Weapon effects at true world scale (left of each pair) and
+    magnified (right), under both light models. Judge the small one
+    &mdash; that is the size it ships at. The magnified copy is only
+    there to show what the small one is made of.
+</p>
+
+<div>
+    <button id="theme">cycle theme</button>
+    <button id="play">play / pause</button>
+</div>
+
+<canvas id="bench"></canvas>
+
+<script type="module" src="./fx.js"></script>
+</body>
+</html>

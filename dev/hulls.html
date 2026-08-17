@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rts-life · hull sheet</title>
+<meta name="color-scheme" content="light dark">
+<style>
+/* Dev tooling. Colours come from the theme at runtime, same rule
+   as the main app — see src/render/theme.js. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font: 10px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    background: var(--c-ground);
+    color: var(--c-hud-dim);
+    padding: 28px 32px 60px;
+}
+h1 { font-size: 10px; font-weight: 700; color: var(--c-hud-text); margin-bottom: 4px; }
+p  { margin-bottom: 26px; text-transform: none; letter-spacing: .04em; opacity: .8; }
+canvas { display: block; width: 100%; height: auto; }
+button {
+    font: inherit; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--c-hud-text); background: none;
+    border: 1px solid var(--c-grid); border-radius: 4px;
+    padding: 5px 11px; margin-right: 6px; cursor: pointer;
+}
+button:hover { border-color: var(--c-hud-dim); }
+</style>
+</head>
+<body>
+
+<h1>hull sheet</h1>
+<p>
+    Every hull at 6&times;, in both light models. Top row: intact.
+    Middle: battle damage. Bottom: silhouette test &mdash; if a class
+    is not identifiable in solid black, the outline is wrong.
+</p>
+
+<div>
+    <button id="theme">cycle theme</button>
+    <button id="grid">toggle grid</button>
+</div>
+
+<canvas id="sheet"></canvas>
+
+<script type="module" src="./hulls.js"></script>
+</body>
+</html>

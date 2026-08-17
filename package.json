@@ -1,0 +1,12 @@
+{
+  "name": "rts-life",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A calm, self-playing 2D space RTS simulation.",
+  "scripts": {
+    "dev": "node tools/serve.mjs",
+    "sim": "node tools/sim.mjs",
+    "test": "node --test"
+  }
+}
