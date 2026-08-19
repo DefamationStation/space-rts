@@ -5,6 +5,7 @@ A calm, self-playing 2D space simulation. Two factions mine asteroids, build fle
 Zero dependencies, no build step, every pixel drawn procedurally.
 
 ---
+<img width="1872" height="1206" alt="image" src="https://github.com/user-attachments/assets/d02b0926-c970-453d-b510-f0c4bbe1d84a" />
 
 ## Run it
 
